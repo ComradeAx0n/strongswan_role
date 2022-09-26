@@ -1,0 +1,46 @@
+- name: Allow SSH
+  community.general.ufw:
+    rule: allow
+    name: OpenSSH
+
+- name: Allow IPSec ports
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: udp
+  loop:
+    - '500'
+    - '4500'
+
+- name: Configuring before.rules
+  ansible.builtin.blockinfile:
+    path: /etc/ufw/before.rules
+    insertbefore: "# Don't delete these required lines, otherwise there will be errors"
+    block: |
+      *nat
+      -A POSTROUTING -s {{ rightsourceip }} -o {{ ansible_facts.default_ipv4.interface }} -m policy --pol ipsec --dir out -j ACCEPT
+      -A POSTROUTING -s {{ rightsourceip }} -o {{ ansible_facts.default_ipv4.interface }} -j MASQUERADE
+      COMMIT
+
+      *mangle
+      -A FORWARD --match policy --pol ipsec --dir in -s {{ rightsourceip }} -o {{ ansible_facts.default_ipv4.interface }} -p tcp -m tcp --tcp-flags SYN,RST SYN -m tcpmss --mss 1361:1536 -j TCPMSS --set-mss 1360
+      COMMIT
+    marker: "# {mark} ANSIBLE MANAGED BLOCK nat and mangle"
+    backup: yes
+
+- name: Configuring before.rules
+  ansible.builtin.blockinfile:
+    path: /etc/ufw/before.rules
+    insertafter: "# End required lines"
+    block: |
+      -A ufw-before-forward --match policy --pol ipsec --dir in --proto esp -s {{ rightsourceip }} -j ACCEPT
+      -A ufw-before-forward --match policy --pol ipsec --dir out --proto esp -d {{ rightsourceip }} -j ACCEPT
+    marker: "# {mark} ANSIBLE MANAGED BLOCK policy"
+    backup: yes
+
+- name: Restart ufw
+  community.general.ufw:
+    state: "{{ item }}"
+  loop:
+    - reloaded
+    - enabled

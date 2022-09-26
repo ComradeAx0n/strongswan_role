@@ -1,0 +1,63 @@
+- name: IPSec server
+  hosts: ru-server-0
+  vars:
+    # server_domain_or_IP: domain or ip, include @ if use domain
+    rightsourceip: "192.168.31.0/24"
+  pre_tasks:
+    # - name: Install packages
+    #   package:
+    #     name:
+    #       - vim
+    #   tags:
+    #     - pre
+  roles:
+    - role: metfan1981.ansible_role_strongswan
+      vars:
+        strongswan_version: "5.9.7"
+        strongswan_config_setup:
+          charondebug: "ike 1, knl 1, cfg 0"
+          uniqueids: "no"
+        strongswan_conn_default:
+          auto: add
+          compress: "no"
+          type: tunnel
+          keyexchange: ikev2
+          fragmentation: "yes"
+          forceencaps: "yes"
+          dpdaction: clear
+          dpddelay: 300s
+          rekey: "no"
+          left: "%any"
+          leftid: "{{ server_domain_or_IP | default(ansible_host) }}"
+          leftcert: server-cert.pem
+          leftsendcert: always
+          leftsubnet: "0.0.0.0/0"
+        strongswan_conns:
+          conn1:
+            right: "%any"
+            rightid: "%any"
+            rightauth: eap-mschapv2
+            rightsourceip: "{{ rightsourceip }}"
+            rightdns: "8.8.8.8,8.8.4.4"
+            rightsendcert: never
+            eap_identity: "%identity"
+            ike: "chacha20poly1305-sha512-curve25519-prfsha512,aes256gcm16-sha384-prfsha384-ecp384,aes256-sha1-modp1024,aes128-sha1-modp1024,3des-sha1-modp1024!"
+            esp: "chacha20poly1305-sha512,aes256gcm16-ecp384,aes256-sha256,aes256-sha1,3des-sha1!"
+        strongswan_secrets:
+          - type: RSA
+            credentials: server-key.pem
+          - left: some_user
+            type: EAP
+            credentials: UJJgfmbAPjx2fEe2
+      tags:
+        - strongswan
+  tasks:
+    - name: Certificates
+      ansible.builtin.import_tasks: certs.yml
+      tags:
+        - certs
+
+    - name: Configuring firewall
+      ansible.builtin.import_tasks: firewall.yml
+      tags:
+        - firewall

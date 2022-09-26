@@ -1,0 +1,3 @@
+roles:
+  - role: metfan1981.ansible_role_strongswan
+    version: "v0.1.31"

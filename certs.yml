@@ -1,0 +1,57 @@
+- name: Create cert folders
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "700"
+  loop:
+    - ~/pki/cacerts
+    - ~/pki/certs
+    - ~/pki/private
+
+- name: Generate root key
+  ansible.builtin.shell:
+    cmd: pki --gen --type rsa --size 4096 --outform pem > ~/pki/private/ca-key.pem
+    creates: ~/pki/private/ca-key.pem
+
+- name: Create CA
+  ansible.builtin.shell:
+    cmd: |
+      pki --self --ca --lifetime 3650 --in ~/pki/private/ca-key.pem \
+      --type rsa --dn "CN=VPN root CA" --outform pem > ~/pki/cacerts/ca-cert.pem
+    creates: ~/pki/cacerts/ca-cert.pem
+
+- name: Generate server key
+  ansible.builtin.shell:
+    cmd: pki --gen --type rsa --size 4096 --outform pem > ~/pki/private/server-key.pem
+    creates: ~/pki/private/server-key.pem
+
+- name: Create arg for ip configuration
+  ansible.builtin.set_fact:
+    san_argument: "--san {{ server_domain_or_IP }}"
+  when:
+    - server_domain_or_IP is defined
+    - server_domain_or_IP | ansible.netcommon.ipaddr
+
+- name: Create CA
+  ansible.builtin.shell:
+    cmd: |
+      pki --pub --in ~/pki/private/server-key.pem --type rsa \
+        | pki --issue --lifetime 1825 \
+          --cacert ~/pki/cacerts/ca-cert.pem \
+          --cakey ~/pki/private/ca-key.pem \
+          --dn "'{{ server_domain_or_IP | default(ansible_host) }}'" --san '{{ server_domain_or_IP | default(ansible_host) }} {{ san_argument | default(omit) }}'  \
+          --flag serverAuth --flag ikeIntermediate --outform pem \
+      >  ~/pki/certs/server-cert.pem
+    creates: ~/pki/certs/server-cert.pem
+
+- name: Copy certs
+  ansible.builtin.copy:
+    remote_src: true
+    src: "{{ item }}"
+    dest: /etc/ipsec.d/
+    mode: '544'
+    backup: true
+  loop:
+    - ~/pki/cacerts
+    - ~/pki/certs
+    - ~/pki/private
