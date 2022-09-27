@@ -1,0 +1,2 @@
+# server_domain_or_IP: domain or ip, include @ if use domain
+rightsourceip: "192.168.1.0/24"

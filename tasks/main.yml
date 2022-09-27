@@ -1,0 +1,14 @@
+- name: Strongswan
+  ansible.builtin.import_tasks: strongswan.yml
+  tags:
+    - strongswan
+
+- name: Certificates
+  ansible.builtin.import_tasks: certs.yml
+  tags:
+    - certs
+
+- name: Configuring firewall
+  ansible.builtin.import_tasks: firewall.yml
+  tags:
+    - firewall
