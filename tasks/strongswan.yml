@@ -1,11 +1,14 @@
 - name: Install packages
-  ansible.builtin.package:
+  ansible.builtin.apt:
     name:
       - strongswan
       - strongswan-pki
+      - strongswan-swanctl
       - libcharon-extra-plugins
       - libcharon-extauth-plugins
       - libstrongswan-extra-plugins
+      - libtss2-tcti-tabrmd0
+    update_cache: yes
 
 - name: Strongswan ipsec.conf
   template:
@@ -25,35 +28,19 @@
     mode: "0640"
   notify: ipsec secrets reload
 
-# - name: Strongswan updown script
-#   block:
-#     - name: create strongswan directory
-#       file:
-#         path: "{{strongswan_prefix}}/strongswan"
-#         state: directory
-#         recurse: yes
-#         owner: "root"
-#         group: "root"
+- name: Configuring sysctl
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/ufw/sysctl.conf
+  loop:
+    - name: net.ipv4.ip_forward
+      value: 1
+    - name: net.ipv4.conf.all.accept_redirects
+      value: 0
+    - name: net.ipv4.conf.all.send_redirects
+      value: 0
+    - name: net.ipv4.ip_no_pmtu_disc
+      value: 1
 
-#     - name: add updown script
-#       template:
-#         src: strongswan/updown.sh.j2
-#         dest: "{{ strongswan_prefix }}/strongswan/updown.sh"
-#         owner: "root"
-#         group: "root"
-#         mode: "0755"
-#       notify: ipsec restart
-#   when: strongswan_updown is defined and strongswan_updown.keys()|length > 0
 
-# - name: setup logfile
-#   template:
-#     src: strongswan/charon-logging.conf.j2
-#     dest: /etc/strongswan.d/charon-logging.conf
-#   notify: ipsec restart
-
-# - name: disable routes installing by charon
-#   replace:
-#     path: /etc/strongswan.d/charon.conf
-#     regexp: '^.*install_routes.*yes|^.*#.*install_routes.*'
-#     replace: 'install_routes = no'
-#   notify: ipsec restart

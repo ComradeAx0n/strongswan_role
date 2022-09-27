@@ -1,2 +1,49 @@
-# server_domain_or_IP: domain or ip, include @ if use domain
+# domain or ip
+server_domain_or_IP: "{{ ansible_host }}"
+
+# User and password for authorization on VPN
+# secrets:
+#   user:
+#   password:
+
+# Local client subnet
 rightsourceip: "192.168.1.0/24"
+
+# strongswan config
+strongswan_version: "5.9.7"
+strongswan_config_setup:
+  charondebug: "ike 1, knl 1, cfg 0"
+  uniqueids: "no"
+  strictcrlpolicy: "no"
+strongswan_conn_default:
+  auto: add
+  compress: "no"
+  type: tunnel
+  keyexchange: ikev2
+  fragmentation: "yes"
+  forceencaps: "yes"
+  dpdaction: clear
+  dpddelay: 300s
+  rekey: "no"
+  left: "%any"
+  leftid: "{{ server_domain_or_IP }}"
+  leftcert: server-cert.pem
+  leftsendcert: always
+  leftsubnet: "0.0.0.0/0"
+strongswan_conns:
+  conn1:
+    right: "%any"
+    rightid: "%any"
+    rightauth: eap-mschapv2
+    rightsourceip: "{{ rightsourceip }}"
+    rightdns: "8.8.8.8,8.8.4.4"
+    rightsendcert: never
+    eap_identity: "%identity"
+    ike: "chacha20poly1305-sha512-curve25519-prfsha512,aes256gcm16-sha384-prfsha384-ecp384,aes256-sha1-modp1024,aes128-sha1-modp1024,3des-sha1-modp1024!"
+    esp: "chacha20poly1305-sha512,aes256gcm16-ecp384,aes256-sha256,aes256-sha1,3des-sha1!"
+strongswan_secrets:
+  - type: RSA
+    credentials: server-key.pem
+  - left: "{{ secrets.user }}"
+    type: EAP
+    credentials: "{{ secrets.password }}"

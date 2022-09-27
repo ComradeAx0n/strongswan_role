@@ -5,3 +5,7 @@
 - name: ipsec secrets reload
   command: >
     ipsec rereadsecrets
+
+- name: Reload ufw
+  community.general.ufw:
+    state: reloaded

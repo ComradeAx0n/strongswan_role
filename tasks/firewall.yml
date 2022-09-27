@@ -2,6 +2,7 @@
   community.general.ufw:
     rule: allow
     name: OpenSSH
+  notify: Reload ufw
 
 - name: Allow IPSec ports
   community.general.ufw:
@@ -11,6 +12,7 @@
   loop:
     - '500'
     - '4500'
+  notify: Reload ufw
 
 - name: Configuring before.rules
   ansible.builtin.blockinfile:
@@ -27,6 +29,7 @@
       COMMIT
     marker: "# {mark} ANSIBLE MANAGED BLOCK nat and mangle"
     backup: yes
+  notify: Reload ufw
 
 - name: Configuring before.rules
   ansible.builtin.blockinfile:
@@ -37,10 +40,8 @@
       -A ufw-before-forward --match policy --pol ipsec --dir out --proto esp -d {{ rightsourceip }} -j ACCEPT
     marker: "# {mark} ANSIBLE MANAGED BLOCK policy"
     backup: yes
+  notify: Reload ufw
 
-- name: Restart ufw
+- name: Enable ufw
   community.general.ufw:
-    state: "{{ item }}"
-  loop:
-    - reloaded
-    - enabled
+    state: enabled

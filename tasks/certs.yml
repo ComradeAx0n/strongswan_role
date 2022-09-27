@@ -27,19 +27,18 @@
 
 - name: Create arg for ip configuration
   ansible.builtin.set_fact:
-    san_argument: "--san {{ server_domain_or_IP }}"
+    san_argument: "--san @{{ server_domain_or_IP }}"
   when:
-    - server_domain_or_IP is defined
     - server_domain_or_IP | ansible.netcommon.ipaddr
 
-- name: Create CA
+- name: Create server cert
   ansible.builtin.shell:
     cmd: |
       pki --pub --in ~/pki/private/server-key.pem --type rsa \
         | pki --issue --lifetime 1825 \
           --cacert ~/pki/cacerts/ca-cert.pem \
           --cakey ~/pki/private/ca-key.pem \
-          --dn "'{{ server_domain_or_IP | default(ansible_host) }}'" --san '{{ server_domain_or_IP | default(ansible_host) }} {{ san_argument | default(omit) }}'  \
+          --dn "CN={{ server_domain_or_IP }}" {{ san_argument | default(omit) }} --san {{ server_domain_or_IP }}  \
           --flag serverAuth --flag ikeIntermediate --outform pem \
       >  ~/pki/certs/server-cert.pem
     creates: ~/pki/certs/server-cert.pem
@@ -55,3 +54,4 @@
     - ~/pki/cacerts
     - ~/pki/certs
     - ~/pki/private
+  notify: ipsec restart

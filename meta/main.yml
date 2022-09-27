@@ -1,0 +1,15 @@
+galaxy_info:
+  author: Ax0n
+  description: Ansible role for StrongSwan
+  license: Apache
+  min_ansible_version: 2.12
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+
+  galaxy_tags:
+    - system
+    - security
+
+dependencies: []
